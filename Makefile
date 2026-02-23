@@ -14,7 +14,7 @@ HELM_RELEASE := claworc
 HELM_NAMESPACE := claworc
 
 .PHONY: agent agent-build agent-test agent-push agent-exec dashboard docker-prune release \
-	helm-install helm-upgrade helm-uninstall helm-template install-dev dev dev-stop \
+	helm-install helm-upgrade helm-uninstall helm-template install-dev dev \
 	pull-agent local-build local-up local-down local-logs local-clean control-plane \
 	ssh-integration-test ssh-file-integration-test
 
@@ -81,7 +81,12 @@ install-test:
 
 install-dev: install-test
 	@echo "Installing development dependencies..."
-	@cd control-plane/internal &&
+	@echo "Installing Go dependencies..."
+	@cd control-plane && go mod download
+	@echo "Installing air (live-reload)..."
+	@go install github.com/air-verse/air@latest
+	@echo "Installing goreman (process manager)..."
+	@go install github.com/mattn/goreman@latest
 	@echo "Installing frontend dependencies (npm)..."
 	@cd control-plane/frontend && npm install
 	@echo "All dependencies installed successfully!"
@@ -93,17 +98,7 @@ dev:
 	@echo "Control plane: http://localhost:8000"
 	@echo "Frontend:      http://localhost:5173"
 	@echo ""
-	@export CLAWORC_AUTH_DISABLED=true; \
-	(cd control-plane && $(shell go env GOPATH)/bin/air) & \
-	(cd control-plane/frontend && npm run dev) & \
-	wait
-
-dev-stop:
-	@echo "Stopping development servers..."
-	@-pkill -f "air" 2>/dev/null || true
-	@-lsof -ti:8000 | xargs kill -9 2>/dev/null || true
-	@-lsof -ti:5173 | xargs kill -9 2>/dev/null || true
-	@echo "Development servers stopped"
+	CLAWORC_AUTH_DISABLED=true goreman -set-ports=false start
 
 # --- Local Docker testing ---------------------------------------------------
 
