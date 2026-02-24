@@ -10,14 +10,15 @@ interface ExecResult {
   exitCode: number;
 }
 
-function dockerLogs(): string {
+function hostExec(args: string[]): string {
   try {
-    return execFileSync("docker", ["logs", "--tail", "100", CONTAINER], {
+    return execFileSync(args[0], args.slice(1), {
       encoding: "utf-8",
       timeout: 10_000,
     });
   } catch (err: any) {
-    return err.stdout ?? err.stderr ?? "(no logs)";
+    // docker logs writes to stderr
+    return (err.stdout ?? "") + (err.stderr ?? "") || `(exit ${err.status})`;
   }
 }
 
@@ -88,12 +89,14 @@ describe("agent image", { timeout: 300_000 }, () => {
     const check = exec(["pgrep", "-f", "openclaw gateway"]);
     if (check.exitCode !== 0) {
       // Dump diagnostics before failing
+      const state = hostExec(["docker", "inspect", "--format", "{{.State.Status}} exit={{.State.ExitCode}}", CONTAINER]);
+      console.error("=== Container state: " + state.trim());
       console.error("=== Container logs ===");
-      console.error(dockerLogs());
+      console.error(hostExec(["docker", "logs", "--tail", "200", CONTAINER]));
       console.error("=== Process list ===");
-      exec(["ps", "aux"]);
+      console.error(exec(["ps", "aux"]).stdout || "(empty)");
       console.error("=== OpenClaw log ===");
-      exec(["cat", "/var/log/claworc/openclaw.log"]);
+      console.error(exec(["cat", "/var/log/claworc/openclaw.log"]).stdout || "(missing)");
       throw new Error("openclaw gateway did not start within 240s");
     }
 
