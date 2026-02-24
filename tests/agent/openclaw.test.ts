@@ -70,7 +70,7 @@ describe("agent image", { timeout: 300_000 }, () => {
 
     execFileSync(
       "docker",
-      ["run", "-d", "--privileged", "--platform", "linux/amd64", "-e", "OPENCLAW_GATEWAY_TOKEN=zzzbbb", "--name", CONTAINER, IMAGE],
+      ["run", "-d", "--privileged", "--platform", "linux/amd64", "-e", "OPENCLAW_GATEWAY_TOKEN=zzzbbb", "-e", "S6_VERBOSITY=2", "-e", "S6_LOGGING=0", "--name", CONTAINER, IMAGE],
       { encoding: "utf-8" },
     );
 
@@ -89,26 +89,16 @@ describe("agent image", { timeout: 300_000 }, () => {
     const check = exec(["pgrep", "-f", "openclaw gateway"]);
     if (check.exitCode !== 0) {
       // Dump diagnostics before failing
-      const state = hostExec(["docker", "inspect", "--format", "{{.State.Status}} exit={{.State.ExitCode}}", CONTAINER]);
-      console.error("=== Container state: " + state.trim());
-      console.error("=== Container logs ===");
+      console.error("=== Container logs (s6-overlay init with S6_VERBOSITY=2) ===");
       console.error(hostExec(["docker", "logs", "--tail", "200", CONTAINER]));
-      console.error("=== Process list ===");
-      console.error(exec(["ps", "aux"]).stdout || "(empty)");
       console.error("=== s6-rc service list (brought up) ===");
       console.error(exec(["/package/admin/s6-rc/command/s6-rc", "-a", "list"]).stdout || "(none)");
-      console.error("=== s6-svstat svc-openclaw ===");
-      console.error(exec(["/package/admin/s6/command/s6-svstat", "/run/service/svc-openclaw"]).stdout || "(no status)");
-      console.error("=== s6-svstat svc-sshd ===");
-      console.error(exec(["/package/admin/s6/command/s6-svstat", "/run/service/svc-sshd"]).stdout || "(no status)");
-      console.error("=== compiled init-setup ===");
-      console.error(exec(["ls", "-laR", "/run/s6-rc/servicedirs/"]).stdout || "(missing)");
-      console.error("=== try running init-setup up manually ===");
-      console.error(exec(["bash", "-x", "/etc/s6-overlay/s6-rc.d/init-setup/up"]).stdout || "(failed)");
-      console.error("=== /var/log/claworc after manual run ===");
-      console.error(exec(["ls", "-la", "/var/log/claworc/"]).stdout || "(still missing)");
-      console.error("=== OpenClaw log ===");
-      console.error(exec(["cat", "/var/log/claworc/openclaw.log"]).stdout || "(missing)");
+      console.error("=== s6-rc compiled database ===");
+      console.error(exec(["ls", "-la", "/run/s6-rc/compiled/"]).stdout || "(missing)");
+      console.error("=== s6-rc compiled resolve dir ===");
+      console.error(exec(["ls", "-la", "/run/s6-rc/compiled/resolve/"]).stdout || "(missing)");
+      console.error("=== Process list ===");
+      console.error(exec(["ps", "aux"]).stdout || "(empty)");
       throw new Error("openclaw gateway did not start within 240s");
     }
 
