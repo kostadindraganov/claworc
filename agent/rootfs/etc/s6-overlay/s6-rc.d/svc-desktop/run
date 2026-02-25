@@ -10,10 +10,10 @@ while ! xdpyinfo -display :0 >/dev/null 2>&1; do sleep 0.5; done
 # Start openbox window manager in background
 s6-setuidgid claworc openbox &
 
-# Build optional user-agent flag
-UA_FLAG=""
+# Build optional extra flags (array preserves spaces in values)
+EXTRA_ARGS=()
 if [ -n "$CHROMIUM_USER_AGENT" ]; then
-  UA_FLAG="--user-agent=$CHROMIUM_USER_AGENT"
+  EXTRA_ARGS+=("--user-agent=$CHROMIUM_USER_AGENT")
 fi
 
 # Run chromium in a restart loop
@@ -31,6 +31,6 @@ while true; do
     --disable-infobars \
     --disable-component-update \
     --load-extension=/opt/stealth-extension \
-    $UA_FLAG > /dev/null 2>&1
+    "${EXTRA_ARGS[@]}" > /dev/null 2>&1
   sleep 1
 done
