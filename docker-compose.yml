@@ -3,7 +3,7 @@ services:
   control-plane:
     image: glukw/claworc:latest
     ports:
-      - "9002:9002"
+      - "8000:8000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - claworc-data:/app/data
